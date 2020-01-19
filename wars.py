@@ -27,9 +27,30 @@ class Attack(Command):
     def execute(self, unit): unit.attack(self.world)
 class ChangeUnit(Command):
     def execute(self, unit):
-        self.world.selectedUnit += 1
-        if len(self.world.unitList) <= self.world.selectedUnit:
-            self.world.selectedUnit = 0
+        before = self.world.selectedUnit
+        for i in range(self.world.selectedUnit, len(self.world.unitList)):
+            if unit != self.world.unitList[i]:
+                if unit.image.get_at((0,0)) == self.world.unitList[i].image.get_at((0,0)):
+                    self.world.selectedUnit = i
+                    unit.canMove = False
+                    break
+        if before == self.world.selectedUnit:
+            for i in range(len(self.world.unitList)):
+                if unit != self.world.unitList[i]:
+                    if unit.image.get_at((0,0)) == self.world.unitList[i].image.get_at((0,0)):
+                        self.world.selectedUnit = i
+                        unit.canMove = False
+                        break
+        for u in self.world.unitList:
+            if unit.image.get_at((0,0)) == u.image.get_at((0,0)):
+                if u.canMove:
+                    return
+        for i in range(len(self.world.unitList)):
+            if unit.image.get_at((0,0)) != self.world.unitList[i].image.get_at((0,0)):
+                self.world.selectedUnit = i
+        for u in self.world.unitList:
+            if unit.image.get_at((0,0)) == u.image.get_at((0,0)):
+                u.canMove = True
 class InputHandler:
     def __init__(self, world):
         self.moveTop = MoveTop(world)
@@ -56,6 +77,7 @@ class InputHandler:
 class Unit(pygame.sprite.Sprite):
     def __init__(self, world, x, y, color):
         super().__init__()
+        self.canMove = True
         self.world = world
         self.life = 10
         self.power = 4
@@ -74,7 +96,7 @@ class Unit(pygame.sprite.Sprite):
         if self.life <= 0:
             world.unitList.remove(self)
     def move(self, world, x, y):
-        if world.checkUnit(x, y):
+        if world.checkUnit(x, y) and self.canMove:
             if x >= 0 and x < SCREEN_SIZE and y >= 0 and y < SCREEN_SIZE:
                 self.rect.left = x
                 self.rect.top = y
@@ -83,11 +105,13 @@ class World:
         self.sysfont = pygame.font.SysFont(None, 50)
         self.screen = pygame.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
         self.clock = pygame.time.Clock()
-        self.unitList = [Unit(self,1,1,GREEN), Unit(self,1,2,GREEN), Unit(self,8,8,BLUE), Unit(self,8,9,BLUE)]
+        self.unitList = [Unit(self,1,1,GREEN), Unit(self,1,2,GREEN), Unit(self,3,2,GREEN), Unit(self,8,8,BLUE), Unit(self,8,9,BLUE)]
         self.selectedUnit = 0
         self.movableList = []
     def createMovableList(self, unit):
-        return [self.m(unit,1,0),self.m(unit,0,1),self.m(unit,-1,0),self.m(unit,0,-1)]
+        if unit.canMove:
+            return [self.m(unit,1,0),self.m(unit,0,1),self.m(unit,-1,0),self.m(unit,0,-1),self.m(unit,2,0),self.m(unit,0,2),self.m(unit,-2,0),self.m(unit,0,-2),self.m(unit,1,1),self.m(unit,-1,1),self.m(unit,-1,-1),self.m(unit,1,-1)]
+        return []
     def m(self, unit, x, y):
         return Unit(self, (unit.rect.left/BLOCK_SIZE)+x, (unit.rect.top/BLOCK_SIZE)+y, RED)
     def checkUnit(self, x, y):
